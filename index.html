@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light">
+<meta name="description" content="PoliCheck 政治人物實績查證助手。從人物資料、新聞報導到官方紀錄，回到來源，形成自己的判斷。">
+<title>PoliCheck｜政治人物實績查證助手</title>
+<style>
+:root{--background:#f6f5f1;--surface:#fffefa;--text:#292923;--muted:#66665e;--border:#deded5;--accent:#66573e;--warning:#80602c;--radius:18px;--shadow:0 5px 24px #35332306;--soft:#eeede6}
+*{box-sizing:border-box}html{scroll-behavior:smooth;scroll-padding-top:24px}body{margin:0;background:var(--background);color:var(--text);font-family:Inter,"Noto Sans TC","Microsoft JhengHei",system-ui,sans-serif;line-height:1.7;font-size:15px}button,input,select{font:inherit}button,a,input,select{-webkit-tap-highlight-color:transparent}button,a{touch-action:manipulation}a{color:inherit;text-underline-offset:4px}button{cursor:pointer}button:disabled{cursor:wait;opacity:.65}button,a{transition:background .18s,transform .18s,border-color .18s}a:hover{color:var(--accent)}:focus-visible{outline:3px solid #997545;outline-offset:4px}[hidden]{display:none!important}h1,h2,h3,p{margin:0}h2{font-size:22px;letter-spacing:-.5px}h3{font-size:17px}button{color:var(--text)}.wrap{width:min(1160px,calc(100% - 64px));margin:auto}.skip{position:absolute;left:16px;top:-100px;background:white;padding:12px;z-index:10}.skip:focus{top:10px}.header{height:90px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;gap:20px}.brand{display:flex;gap:12px;align-items:center;text-decoration:none}.brand strong{font-size:23px;letter-spacing:-1px}.brand small{display:block;font-size:10px;letter-spacing:2px;color:var(--muted);line-height:1.2}.brand-mark{height:39px;width:39px;display:grid;place-items:center;background:var(--text);color:var(--surface);border-radius:12px;font-size:23px}.nav{display:flex;gap:28px;align-items:center;font-size:13px}.nav a{text-decoration:none}.nav .tag{border:1px solid var(--border);border-radius:20px;padding:5px 12px}.hero{display:grid;grid-template-columns:minmax(0,1fr) 280px;align-items:center;gap:48px;padding:60px 0 32px}.eyebrow{font-size:11px;letter-spacing:2.4px;font-weight:700;color:var(--accent);display:flex;align-items:center;gap:9px}.eyebrow:before{content:"";width:20px;height:1px;background:var(--accent)}h1{font-size:clamp(27px,3.5vw,42px);line-height:1.4;letter-spacing:-1.5px;margin:15px 0 12px}.subtitle{font-size:22px;letter-spacing:1px}.hero-description{font-size:14px;color:var(--muted);margin-top:13px;max-width:650px}.mascot-scene{position:relative;height:205px;display:grid;place-items:center}.orbit{width:192px;height:192px;border-radius:50%;border:1px dashed #d3d0c5;position:absolute;background:radial-gradient(circle,#e7e4d8 0,transparent 68%)}.robot{position:relative;display:block;width:94px;height:76px;background:#fdfcf8;border:2px solid #59584c;border-radius:22px;box-shadow:5px 6px 0 #c8c5b8;isolation:isolate}.robot:before{content:"";position:absolute;left:44px;top:-20px;width:2px;height:18px;background:#59584c}.robot:after{content:"";position:absolute;left:39px;top:-26px;width:12px;height:12px;border:2px solid #59584c;border-radius:50%;background:#c5b393}.eyes{position:absolute;inset:19px 12px 20px;background:#33362f;border-radius:12px;display:flex;justify-content:space-evenly;align-items:center}.eyes:before,.eyes:after{content:"";width:7px;height:10px;border-radius:5px;background:#e9e8c9}.mouth{position:absolute;width:13px;height:5px;border-bottom:2px solid #666556;border-radius:50%;bottom:8px;left:39px}.robot-mini{transform:scale(.46);margin:-17px -22px;flex-shrink:0}.mascot-caption{position:absolute;bottom:0;font-size:11px;color:var(--muted);letter-spacing:2px}.float-note{position:absolute;right:-4px;top:15px;background:var(--surface);padding:7px 13px;border:1px solid var(--border);border-radius:9px;font-size:12px;transform:rotate(5deg)}.search-panel{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:26px 30px;box-shadow:var(--shadow)}.search-label{font-size:13px;font-weight:700;display:block;margin-bottom:10px}.search-row{display:flex;gap:10px}.input-wrap{position:relative;flex:1;min-width:0}.search-icon{position:absolute;left:18px;top:16px;color:var(--muted);pointer-events:none}.search-icon svg{width:23px;height:23px}input{width:100%;height:56px;background:#f9f9f5;border:1px solid var(--border);border-radius:10px;padding:0 18px 0 52px;color:var(--text)}input::placeholder{color:#77776e}input:focus{background:#fff}.primary{border:1px solid var(--text);background:var(--text);color:#fffefa;border-radius:10px;padding:0 27px;min-height:48px;font-weight:600}.primary:hover{background:#49493c;color:white}.clear{border:1px solid var(--border);border-radius:10px;padding:0 17px;background:transparent;min-height:44px}.clear:hover{background:var(--soft)}.options{display:flex;align-items:center;gap:22px;margin-top:17px;flex-wrap:wrap}.option{display:flex;gap:10px;align-items:center;font-size:12px;color:var(--muted)}select{color:var(--text);background:transparent;border:1px solid var(--border);border-radius:7px;min-height:40px;padding:4px 10px}.privacy{margin-left:auto;font-size:11px;color:var(--muted)}.form-error{font-size:13px;color:#89512e;margin-top:10px}.source-strip{display:flex;align-items:center;gap:18px;margin:17px 3px 28px;font-size:11px;color:var(--muted);flex-wrap:wrap}.source-strip a{text-decoration:none;font-weight:600}.source-strip .separator{height:12px;border-left:1px solid #ccc}.section-top{display:flex;justify-content:space-between;align-items:center;gap:16px;margin-bottom:18px}.section-index{font-size:10px;letter-spacing:2px;color:var(--muted);margin-bottom:5px}.pill{font-size:11px;border-radius:20px;padding:5px 12px;background:var(--soft);white-space:nowrap}.intro{border-top:1px solid var(--border);padding:31px 0 36px}.intro-heading{font-size:20px}.intro-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:18px;margin-top:20px}.step{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:23px}.step-number{font-size:12px;font-family:monospace;color:var(--accent);display:block;margin-bottom:15px}.step p{color:var(--muted);font-size:13px;margin-top:7px}.loading{display:flex;align-items:center;gap:24px;padding:23px 26px;border:1px solid var(--border);border-radius:14px;margin:0 0 20px;background:var(--surface)}.loading p{font-size:14px}.loading small{color:var(--muted)}.spinner{width:15px;height:15px;border:2px solid #d5d3c8;border-top-color:var(--accent);border-radius:50%;display:inline-block;animation:spin .8s linear infinite;vertical-align:middle;margin-right:8px}@keyframes spin{to{transform:rotate(360deg)}}.notice{background:#f4ecdd;border:1px solid #e3d3b6;border-radius:12px;padding:15px 18px;font-size:13px;margin:0 0 20px;color:#6c542e}.notice.neutral{background:var(--soft);border-color:var(--border);color:var(--text)}.results-heading{margin:10px 0 20px}.results-heading h2{overflow-wrap:anywhere}.result-meta{color:var(--muted);font-size:12px;margin-top:6px}.work-grid{display:grid;grid-template-columns:minmax(0,1fr) 330px;gap:24px;align-items:start}.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow);padding:25px;min-width:0}.profile{margin-bottom:29px}.profile-head{display:flex;gap:18px;align-items:center;margin:20px 0 16px}.avatar{width:76px;height:84px;background:var(--soft);border-radius:12px;flex-shrink:0;overflow:hidden;display:grid;place-items:center}.avatar svg{width:42px;height:42px;color:#8b8b7d}.avatar img{width:100%;height:100%;object-fit:cover}.profile-name{font-size:24px;line-height:1.4;overflow-wrap:anywhere}.small{color:var(--muted);font-size:12px}.profile-description{font-size:14px;line-height:1.95;white-space:pre-line;overflow-wrap:anywhere}.profile-sources{display:flex;gap:14px;flex-wrap:wrap;margin-top:18px;padding-top:14px;border-top:1px solid var(--border);font-size:12px}.news-section{min-width:0}.news-section .section-top{margin-bottom:10px}.news-note{font-size:12px;color:var(--muted);margin-bottom:17px}.filters{display:flex;gap:7px;flex-wrap:wrap;margin-bottom:17px}.filter{border:1px solid var(--border);background:transparent;border-radius:8px;padding:9px 11px;min-height:44px;font-size:12px}.filter:hover{background:var(--soft)}.filter[aria-pressed=true]{background:var(--text);color:var(--surface);border-color:var(--text)}.filter span{margin-left:5px;opacity:.75}.news-list{display:grid;gap:13px}.news-card{background:var(--surface);padding:22px;border:1px solid var(--border);border-radius:13px}.news-meta{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;flex-wrap:wrap;font-size:11px;color:var(--muted)}.badge{font-size:10px;padding:3px 8px;border-radius:5px;background:var(--soft);color:#575748}.badge.legal{background:#ece7ef;color:#65516f}.badge.controversy{background:#f3eadd;color:#7c5d30}.badge.election{background:#e9e9e4;color:#5d5d51}.badge.policy{background:#e9ece4;color:#525e42}.news-card h3{margin:12px 0 17px;font-size:17px;line-height:1.7;overflow-wrap:anywhere}.news-bottom{display:flex;justify-content:space-between;gap:12px;align-items:center;font-size:11px;color:var(--muted)}.news-bottom a{white-space:nowrap;font-weight:700;color:var(--text);padding:8px 0}.news-bottom span{overflow-wrap:anywhere}.empty{border:1px dashed #cecdc1;border-radius:14px;padding:35px 22px;text-align:center;background:#f2f1ea}.empty .robot{transform:scale(.6);margin:-4px auto 6px}.empty p{font-size:14px}.empty small{display:block;margin-top:8px;color:var(--muted);font-size:12px}.sidebar{display:grid;gap:18px}.sidebar h2{font-size:18px}.sidebar-intro{font-size:12px;color:var(--muted);margin:8px 0 17px}.link-stack{display:grid;gap:8px}.resource-link{display:flex;align-items:center;justify-content:space-between;gap:12px;text-decoration:none;border:1px solid var(--border);padding:13px 14px;border-radius:9px;min-height:48px;font-size:13px}.resource-link:after{content:"↗";color:var(--muted);flex-shrink:0}.resource-link:hover{background:var(--soft);border-color:#bebdac;transform:translateY(-1px)}.link-stack small{display:block;font-size:10px;color:var(--muted)}.discussion-links{display:grid;grid-template-columns:1fr 1fr;gap:8px}.discussion-links .resource-link{padding:11px 12px;font-size:12px}.toolbox{margin-top:25px;border-top:1px solid var(--border);padding-top:22px}.toolbox h2{font-size:18px}.tool-links{display:flex;gap:9px;flex-wrap:wrap;margin-top:13px}.tool-links a{font-size:12px}.disclaimer{margin:35px 0 30px;padding:23px 26px;background:#eeede5;border:1px solid #dedccf;border-radius:14px}.disclaimer h2{font-size:14px;margin-bottom:10px}.disclaimer p{font-size:12px;color:#646358;line-height:1.9}.footer{border-top:1px solid var(--border);padding:22px 0 28px;display:flex;justify-content:space-between;gap:15px;font-size:11px;color:var(--muted)}.footer strong{font-size:14px;color:var(--text)}.footer a{text-decoration:none}.noscript{padding:20px;background:#f4ecdd}
+@media(min-width:1024px){.sidebar{position:sticky;top:24px}}
+@media(max-width:1023px){.wrap{width:calc(100% - 40px)}.hero{gap:20px;grid-template-columns:minmax(0,1fr) 205px}.float-note{right:0}.work-grid{grid-template-columns:minmax(0,1fr) 280px;gap:18px}.card{padding:20px}.privacy{width:100%;margin-left:0}.options{gap:12px 22px}.intro-grid{gap:12px}.step{padding:19px}}
+@media(max-width:767px){.wrap{width:calc(100% - 32px)}.header{height:76px}.nav{gap:12px;font-size:12px}.nav .tag{display:none}.brand strong{font-size:21px}.hero{grid-template-columns:1fr;gap:0;padding:34px 0 25px}.mascot-scene{display:none}h1{font-size:28px;letter-spacing:-1px}.subtitle{font-size:19px}.hero-description{font-size:13px}.search-panel{padding:20px 17px}.search-row{display:grid;grid-template-columns:minmax(0,1fr) 66px}.input-wrap{grid-column:1/-1}.primary{height:49px;padding:0 16px}.clear{padding:0 12px}.option{gap:8px}.options{gap:12px}.source-strip{gap:10px;font-size:10px}.source-strip .separator{display:none}.work-grid,.intro-grid{grid-template-columns:1fr}.intro{padding-top:25px}.step{padding:19px 22px}.step-number{margin-bottom:8px}.sidebar{margin-top:8px}.card{padding:21px}.profile{margin-bottom:24px}.section-top{align-items:flex-start}.news-card{padding:19px}.news-card h3{font-size:16px}.filters{gap:6px}.filter{font-size:11px;padding:8px 10px}.discussion-links{grid-template-columns:1fr}.footer{flex-direction:column;gap:5px}.disclaimer{padding:20px}.loading{gap:19px;padding:20px}.tool-links{display:grid;grid-template-columns:1fr}.profile-head{gap:13px}.profile-name{font-size:22px}}
+@media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}*,*:before,*:after{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+<a class="skip" href="#search">跳到人物搜尋</a>
+<div class="wrap">
+<header class="header">
+<a href="#" class="brand" aria-label="PoliCheck 首頁"><span class="brand-mark" aria-hidden="true">⌕</span><span><strong>PoliCheck<span style="color:#8a7b5d">.</span></strong><small>FOLLOW THE SOURCE</small></span></a>
+<nav class="nav" aria-label="主要導覽"><a href="#guide">如何查證</a><a href="#sources">資料來源</a><span class="tag">公開資訊・自主判讀</span></nav>
+</header>
+<main>
+<section class="hero" aria-labelledby="hero-title">
+<div><div class="eyebrow">A LITTLE CURIOSITY. A BETTER PERSPECTIVE.</div><h1 id="hero-title">政治人物實績查證助手</h1><p class="subtitle">少一點口號，多看一點來源。</p><p class="hero-description">從一個名字開始，整理人物資料、近期報導與官方紀錄。<br>把資訊的來處看清楚，讓判斷留在你手中。</p></div>
+<div class="mascot-scene" aria-label="原創機器人：政績查查"><div class="orbit"></div><span class="float-note">一起找找來源吧！</span><div class="robot" aria-hidden="true"><i class="eyes"></i><i class="mouth"></i></div><span class="mascot-caption">你的查證夥伴 · 政績查查</span></div>
+</section>
+<section class="search-panel" id="search" aria-label="查詢政治人物">
+<form id="search-form" novalidate>
+<label class="search-label" for="person-name">你想了解哪位政治人物？</label>
+<div class="search-row"><div class="input-wrap"><span class="search-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 5 5"/></svg></span><input id="person-name" name="name" type="search" placeholder="輸入政治人物姓名" maxlength="80" autocomplete="off" enterkeyhint="search" aria-describedby="form-error"></div><button id="submit" class="primary" type="submit">開始查證 <span aria-hidden="true">↗</span></button><button id="clear" class="clear" type="button">清除</button></div>
+<div class="options"><div class="option"><label for="timespan">新聞時間</label><select id="timespan"><option value="7d">最近 7 天</option><option value="30d" selected>最近 30 天</option><option value="90d">最近 90 天</option></select></div><div class="option"><label for="maxrecords">新聞數量</label><select id="maxrecords"><option value="10">10 則</option><option value="20" selected>20 則</option><option value="30">30 則</option></select></div><span class="privacy">查詢時會將姓名傳送至資料來源服務</span></div>
+<p id="form-error" class="form-error" role="alert" hidden></p>
+</form>
+</section>
+<div id="sources" class="source-strip"><span>公開資料來源</span><span class="separator"></span><a href="https://zh.wikipedia.org/" target="_blank" rel="noopener noreferrer">Wikipedia ↗</a><a href="https://www.wikidata.org/" target="_blank" rel="noopener noreferrer">Wikidata ↗</a><a href="https://www.gdeltproject.org/" target="_blank" rel="noopener noreferrer">GDELT Project ↗</a><span>・資料可用性依各來源而異</span></div>
+<noscript><p class="noscript">請啟用 JavaScript 以搜尋人物與新聞。你仍可透過下方官方網站查閱資料。</p></noscript>
+<div id="loading" class="loading" role="status" hidden><div class="robot robot-mini" aria-hidden="true"><i class="eyes"></i><i class="mouth"></i></div><div><p id="loading-text"></p><small><span class="spinner" aria-hidden="true"></span>連線查詢中，已取得的資料會先顯示。</small></div></div>
+<p id="status" role="status" class="notice" hidden></p>
+<section id="guide" class="intro">
+<div class="section-top"><div><p class="section-index">BEFORE YOU BEGIN</p><h2 class="intro-heading">認識一個人，從三種來源開始。</h2></div><span class="pill">查證，不急著下結論</span></div>
+<div class="intro-grid"><article class="step"><span class="step-number">01 / 認識背景</span><h3>先確認，是同一個人</h3><p>閱讀人物簡介，核對姓名與身分。遇到同名人物，記得進入原始條目確認。</p></article><article class="step"><span class="step-number">02 / 閱讀報導</span><h3>多看幾個角度</h3><p>依主題瀏覽近期新聞，點開完整報導。標題是線索，並不是事件的全部。</p></article><article class="step"><span class="step-number">03 / 回到紀錄</span><h3>讓證據說得更清楚</h3><p>對照政府公告、立法院資料與正式文件，區分事實、說法與評論。</p></article></div>
+</section>
+<section id="results" hidden aria-label="人物查詢結果">
+<div class="results-heading"><p class="section-index">YOUR RESEARCH DESK</p><h2 id="result-title"></h2><p id="result-meta" class="result-meta"></p></div>
+</section>
+<div class="work-grid">
+<div>
+<div id="result-content" hidden>
+<section id="profile" class="card profile" aria-label="人物基本資料"></section>
+<section class="news-section" aria-labelledby="news-title"><div class="section-top"><h2 id="news-title">近期相關新聞</h2><span class="pill" id="news-count">等待查詢</span></div><p class="news-note">來源：GDELT。僅依標題關鍵字分類，不代表事件成立；未擷取新聞全文。日期為 GDELT 收錄日期，保留來源排序。</p><div id="filters" class="filters" role="group" aria-label="依報導主題篩選"></div><p id="filter-summary" class="small" role="status" style="margin-bottom:12px"></p><div id="news-list" class="news-list"></div></section>
+<section class="toolbox" aria-labelledby="tools-title"><h2 id="tools-title">進一步查證</h2><div id="verification-links" class="tool-links"></div></section>
+</div>
+<section id="start-note" class="card">
+<p class="section-index">A NOTE FROM 政績查查</p><h2>先有來源，再有看法。</h2><p class="hero-description">在上方輸入姓名，這裡就會成為你的查證工作區。人物簡介與報導都附上來源連結，方便你回到原文閱讀。</p><p class="small" style="margin-top:20px">查無資料不代表沒有實績；有相關報導，也不代表指控已被證實。</p>
+</section>
+</div>
+<aside class="sidebar">
+<section class="card" aria-labelledby="official-title"><p class="section-index">PRIMARY SOURCES</p><h2 id="official-title">政府與官方資料</h2><p id="official-description" class="sidebar-intro">回到原始紀錄，查閱提案、公告與公開資料。</p><div id="official-links" class="link-stack"><a class="resource-link" href="https://www.gov.tw/" target="_blank" rel="noopener noreferrer">政府入口網</a><a class="resource-link" href="https://www.ly.gov.tw/" target="_blank" rel="noopener noreferrer">立法院全球資訊網</a><a class="resource-link" href="https://data.ly.gov.tw/" target="_blank" rel="noopener noreferrer">立法院開放資料服務平台</a><a class="resource-link" href="https://data.gov.tw/" target="_blank" rel="noopener noreferrer">政府資料開放平台</a></div></section>
+<section class="card" aria-labelledby="discussion-title"><p class="section-index">OTHER PERSPECTIVES</p><h2 id="discussion-title">公開討論與其他觀點</h2><p class="sidebar-intro" id="discussion-description">輸入姓名後，可前往各平台搜尋。網路討論是觀點，請搭配可靠來源判讀。</p><div id="discussion-links" class="discussion-links"></div></section>
+</aside>
+</div>
+<section id="reading-note" class="disclaimer" aria-labelledby="reading-title"><h2 id="reading-title">⚠ 資訊判讀提醒</h2><p>本網站整理公開資訊與搜尋結果，不代表搜尋結果均為已證實事實。</p><p>新聞報導、政治人物本人說法、評論以及政府正式紀錄具有不同證據性質。</p><p>遇到重大爭議時，建議進一步查看官方文件、法院資料及完整新聞內容。</p></section>
+</main>
+<footer class="footer"><span><strong>PoliCheck.</strong> &nbsp; 讓每一次判斷，都有來源可循。</span><span>不提供政治評分或支持建議 &nbsp; · &nbsp; <a href="#search">回到搜尋 ↑</a></span></footer>
+</div>
+<script>
+"use strict";
+const $ = id => document.getElementById(id);
+const ENDPOINTS = {wiki:"https://zh.wikipedia.org/w/api.php",data:"https://www.wikidata.org/w/api.php",news:"https://api.gdeltproject.org/api/v2/doc/doc"};
+const CATEGORIES = {all:"全部",policy:"政策／施政",election:"選舉",controversy:"爭議／質疑",legal:"司法／調查",other:"其他"};
+// Priority is intentional: legal > controversy > election > policy > other.
+const RULES = [
+ ["legal",["法院","起訴","判決","檢調","調查","搜索","不起訴","court","indicted","investigation","prosecutor","verdict"]],
+ ["controversy",["爭議","質疑","批評","指控","遭控","道歉","controversy","criticism","accused","allegation"]],
+ ["election",["選舉","候選","競選","民調","投票","政見","election","campaign","poll","vote"]],
+ ["policy",["政策","法案","預算","建設","改革","計畫","補助","推動","施政","policy","bill","reform","budget"]]
+];
+const MESSAGES = ["🤖 收到！我先確認這個人是誰……","📚 正在翻人物資料……","📰 正在找近期相關新聞……","🏛️ 正在準備官方查證入口……","🔍 快好了，我正在整理來源……"];
+let activeController = null, generation = 0, loadingTimer = null;
+let articles = [], selectedFilter = "all", newsState = "idle";
+function el(tag, text, className) {
+ const node = document.createElement(tag);
+ if(text !== undefined) node.textContent = text;
+ if(className) node.className = className;
+ return node;
+}
+function safeURL(value) {
+ if(typeof value !== "string") return null;
+ try { const url = new URL(value); return ["https:","http:"].includes(url.protocol) && !url.username && !url.password ? url.href : null; } catch { return null; }
+}
+function externalLink(text,url,className) {
+ const link = el("a",text,className);
+ const safe = safeURL(url);
+ if(safe) { link.href=safe; link.target="_blank"; link.rel="noopener noreferrer"; }
+ else { link.removeAttribute("href"); link.title="來源網址無效"; }
+ return link;
+}
+function apiURL(endpoint,params) { return endpoint+"?"+new URLSearchParams(params).toString(); }
+function webSearch(query,news=false) {
+ return "https://www.google.com/search?q="+encodeURIComponent(query)+(news?"&tbm=nws":"");
+}
+function normalized(value) { return String(value || "").normalize("NFKC").toLocaleLowerCase().replace(/[\s·・．.\-－]/g,""); }
+function nameScore(title,name) {
+ const a=normalized(String(title || "").replace(/[（(].*?[）)]/g,"")),b=normalized(name);
+ if(!a || !b) return 0;
+ if(a===b) return 100;
+ if(a.includes(b) && a.length-b.length<=2) return 75;
+ return 0;
+}
+async function fetchJSON(url,signal) {
+ const controller=new AbortController();
+ const cancel=()=>controller.abort();
+ if(signal?.aborted) controller.abort();
+ else signal?.addEventListener("abort",cancel,{once:true});
+ const timer=setTimeout(()=>controller.abort(),10000);
+ try {
+  const response=await fetch(url,{signal:controller.signal,credentials:"omit",referrerPolicy:"no-referrer"});
+  if(!response.ok) throw new Error("HTTP "+response.status);
+  const text=await response.text();
+  let data;
+  try { data=JSON.parse(text); } catch { throw new Error("服務回傳非 JSON 資料"); }
+  if(!data || typeof data!=="object" || Array.isArray(data) || data.error) throw new Error("資料格式異常");
+  return data;
+ } finally { clearTimeout(timer); signal?.removeEventListener("abort",cancel); }
+}
+async function fetchWikipedia(name,signal) {
+ try {
+  const data=await fetchJSON(apiURL(ENDPOINTS.wiki,{action:"query",format:"json",formatversion:2,origin:"*",generator:"search",gsrsearch:name,gsrnamespace:0,gsrlimit:5,prop:"extracts|pageimages|info|pageprops",exintro:1,explaintext:1,exchars:1000,pithumbsize:240,inprop:"url",redirects:1}),signal);
+  const pages=Array.isArray(data.query?.pages)?data.query.pages:[];
+  const page=pages.filter(p=>p && !p.missing && !p.pageprops?.disambiguation && !Object.prototype.hasOwnProperty.call(p.pageprops || {},"disambiguation"))
+   .map(p=>({page:p,score:nameScore(p.title,name)})).filter(p=>p.score>0).sort((a,b)=>b.score-a.score)[0]?.page;
+  return {ok:true,value:page?{name:page.title,intro:typeof page.extract==="string"?page.extract:"此條目暫無可用的簡介，請閱讀原始來源。",image:page.thumbnail?.source,url:page.fullurl || "https://zh.wikipedia.org/wiki/"+encodeURIComponent(page.title),qid:page.pageprops?.wikibase_item}:null};
+ } catch(error) { return {ok:false,error:signal.aborted?"cancelled":error.message}; }
+}
+async function fetchWikidata(name,signal) {
+ try {
+  const found=await fetchJSON(apiURL(ENDPOINTS.data,{action:"wbsearchentities",format:"json",origin:"*",language:"zh",uselang:"zh-tw",type:"item",search:name,limit:5}),signal);
+  const ids=(Array.isArray(found.search)?found.search:[]).map(x=>x?.id).filter(x=>/^Q\d+$/.test(x));
+  if(!ids.length) return {ok:true,value:null};
+  const data=await fetchJSON(apiURL(ENDPOINTS.data,{action:"wbgetentities",format:"json",origin:"*",ids:ids.join("|"),props:"labels|aliases|claims|descriptions",languages:"zh-tw|zh-hant|zh|en"}),signal);
+  const candidates=ids.map(id=>data.entities?.[id]).filter(entity=>{
+   return entity && (entity.claims?.P31 || []).some(c=>c.mainsnak?.datavalue?.value?.id==="Q5");
+  }).map(entity=>{
+   const labels=Object.values(entity.labels || {}).map(x=>x.value);
+   const aliases=Object.values(entity.aliases || {}).flat().map(x=>x.value);
+   return {entity,score:Math.max(0,...labels.concat(aliases).map(x=>nameScore(x,name)))};
+  }).filter(x=>x.score>0).sort((a,b)=>b.score-a.score);
+  const entity=candidates[0]?.entity;
+  if(!entity) return {ok:true,value:null};
+  const labels=entity.labels || {},descriptions=entity.descriptions || {};
+  return {ok:true,value:{qid:entity.id,name:labels["zh-tw"]?.value || labels["zh-hant"]?.value || labels.zh?.value || name,english:labels.en?.value || "",description:descriptions["zh-tw"]?.value || descriptions["zh-hant"]?.value || descriptions.zh?.value || descriptions.en?.value || ""}};
+ } catch(error) { return {ok:false,error:signal.aborted?"cancelled":error.message}; }
+}
+async function fetchGdeltNews(name,english,timespan,maxrecords,signal) {
+ try {
+  // Quoting isolates the name from GDELT query operators; URLSearchParams handles URL encoding.
+  const phrase=value=>'"'+value.replace(/["\\\u0000-\u001f]/g," ").trim()+'"';
+  const first=english || name;
+  const request=async term=>{
+   const url=apiURL(ENDPOINTS.news,{query:phrase(term),mode:"ArtList",maxrecords,format:"json",timespan});
+   const data=await fetchJSON(url,signal);
+   if(!Array.isArray(data.articles)) {
+    if(Object.keys(data).length===0) return [];
+    throw new Error("新聞服務回傳格式異常");
+   }
+   return data.articles;
+  };
+  let results=await request(first),term=first;
+  // Only an empty successful English query triggers one sequential original-name query.
+  if(!results.length && english && normalized(english)!==normalized(name) && !signal.aborted) {
+   results=await request(name);term=name;
+  }
+  const valid=results.filter(a=>a && typeof a.title==="string" && a.title.trim() && safeURL(a.url)).slice(0,Number(maxrecords));
+  return {ok:true,value:valid.map(a=>({...a,category:classifyArticle(a.title)})),term,omitted:results.length-valid.length};
+ } catch(error) { return {ok:false,error:signal.aborted?"cancelled":error.message}; }
+}
+function classifyArticle(title) {
+ const text=String(title || "").toLowerCase();
+ return RULES.find(([,words])=>words.some(word=>/^[a-z]+$/.test(word)?new RegExp("\\b"+word+"\\b","i").test(text):text.includes(word)))?.[0] || "other";
+}
+function formatDate(value) {
+ if(typeof value!=="string" || !value) return "未提供日期";
+ const match=/^(\d{4})(\d{2})(\d{2})T(\d{2})(\d{2})(\d{2})Z$/.exec(value);
+ if(!match) return value;
+ const [,year,month,day,hour,minute,second]=match;
+ const date=new Date(year+"-"+month+"-"+day+"T"+hour+":"+minute+":"+second+"Z");
+ if(!Number.isFinite(date.getTime()) || date.getUTCMonth()+1!==Number(month) || date.getUTCDate()!==Number(day)) return value;
+ return year+"/"+month+"/"+day;
+}
+function robotNode() {
+ const robot=el("div",undefined,"robot");robot.setAttribute("aria-hidden","true");
+ robot.append(el("i",undefined,"eyes"),el("i",undefined,"mouth"));return robot;
+}
+function emptyState(title,detail) {
+ const box=el("div",undefined,"empty");box.append(robotNode(),el("p",title),el("small",detail));return box;
+}
+function renderProfile(name,wiki,data) {
+ const box=$("profile");box.replaceChildren(el("p","PERSON AT A GLANCE","section-index"),el("h2","人物基本資料"));
+ const head=el("div",undefined,"profile-head"),avatar=el("div",undefined,"avatar");
+ const placeholder=el("span","◯","small");placeholder.setAttribute("aria-label","無人物照片");
+ avatar.append(placeholder);
+ if(safeURL(wiki?.value?.image)) {
+  const img=document.createElement("img");img.alt=wiki.value.name+"（Wikipedia 人物圖片）";img.loading="lazy";img.referrerPolicy="no-referrer";img.src=safeURL(wiki.value.image);
+  img.addEventListener("error",()=>avatar.replaceChildren(placeholder),{once:true});avatar.replaceChildren(img);
+ }
+ const info=el("div");info.append(el("h3",wiki?.value?.name || data?.value?.name || name,"profile-name"));
+ info.append(el("p",data?.value?.english || "請核對人物身分與原始條目","small"));
+ head.append(avatar,info);box.append(head);
+ const intro=wiki?.value?.intro || (wiki===null?"正在查詢 Wikipedia 人物資料……":wiki.ok?"目前沒有找到對應的 Wikipedia 人物資料。":"Wikipedia 暫時無法取得；你仍可查看新聞與官方紀錄。");
+ box.append(el("p",intro,"profile-description"));
+ if(data?.value?.description) box.append(el("p","Wikidata 描述："+data.value.description,"small"));
+ const links=el("div",undefined,"profile-sources");
+ if(wiki?.value) links.append(externalLink("來源：Wikipedia ↗",wiki.value.url));
+ if(data?.value) links.append(externalLink("Wikidata · "+data.value.qid+" ↗","https://www.wikidata.org/wiki/"+data.value.qid));
+ if(wiki?.value?.qid && /^Q\d+$/.test(wiki.value.qid) && !data?.value) links.append(externalLink("條目關聯：Wikidata · "+wiki.value.qid+" ↗","https://www.wikidata.org/wiki/"+wiki.value.qid));
+ if(!wiki?.value) links.append(externalLink("前往 Wikipedia 搜尋 ↗","https://zh.wikipedia.org/w/index.php?search="+encodeURIComponent(name)));
+ if(data && !data.ok) links.append(el("span","Wikidata 暫時無法取得","small"));
+ box.append(links);
+}
+function renderFilters() {
+ const box=$("filters");box.replaceChildren();
+ for(const [key,label] of Object.entries(CATEGORIES)) {
+  const count=key==="all"?articles.length:articles.filter(a=>a.category===key).length;
+  const button=el("button",label,"filter");button.type="button";button.dataset.category=key;button.setAttribute("aria-pressed",String(key===selectedFilter));button.append(el("span",String(count)));
+  button.addEventListener("click",()=>{
+   selectedFilter=key;
+   for(const item of box.children) item.setAttribute("aria-pressed",String(item.dataset.category===key));
+   renderNews();
+  });box.append(button);
+ }
+}
+function renderNews() {
+ const box=$("news-list");box.replaceChildren();
+ $("news-count").textContent=newsState==="loading"?"查詢中":newsState==="error"?"暫時無法取得":"共找到 "+articles.length+" 則";
+ $("filter-summary").textContent="";
+ if(newsState==="loading") { box.append(emptyState("政績查查正在整理新聞來源","人物資料與新聞分開查詢，請稍候。"));return; }
+ if(newsState==="error") { box.append(emptyState("新聞來源暫時沒有回應","可能是服務限流、連線問題或逾時。可稍後重試，或使用下方「搜近期新聞」。"));return; }
+ const filtered=articles.filter(a=>selectedFilter==="all" || a.category===selectedFilter);
+ if(!filtered.length) { box.append(emptyState(articles.length?"這個分類目前沒有報導":"🤖 我翻了一圈，目前沒有找到足夠資料。",articles.length?"試試其他分類，或查看全部報導。":"試試完整姓名、延長新聞時間，或直接前往外部來源搜尋。查無結果不代表事件不存在。"));return; }
+ $("filter-summary").textContent="顯示 "+filtered.length+" 則"+(selectedFilter==="all"?"報導":CATEGORIES[selectedFilter]+"相關報導");
+ for(const article of filtered) {
+  const card=el("article",undefined,"news-card"),meta=el("div",undefined,"news-meta");
+  const domain=typeof article.domain==="string"?article.domain:new URL(article.url).hostname;
+  meta.append(el("span",domain+" · "+formatDate(article.seendate)),el("span",CATEGORIES[article.category]+"相關報導","badge "+article.category));
+  const heading=el("h3",article.title),bottom=el("div",undefined,"news-bottom");
+  const language=typeof article.language==="string"?article.language:"未提供";
+  const country=typeof article.sourcecountry==="string"?article.sourcecountry:"未提供";
+  bottom.append(el("span","語言："+language+" · 來源國："+country),externalLink("閱讀原文 ↗",article.url));
+  card.append(meta,heading,bottom);box.append(card);
+ }
+}
+function createVerificationLinks(name) {
+ const quoted='"'+name.replace(/"/g,"")+'"';
+ const official=[
+  ["搜尋政府網站",webSearch(quoted+" site:gov.tw")],
+  ["立法院全球資訊網","https://www.ly.gov.tw/"],
+  ["搜尋立法院資料",webSearch(quoted+" site:ly.gov.tw")],
+  ["立法院開放資料服務平台","https://data.ly.gov.tw/"],
+  ["政府資料開放平台", "https://data.gov.tw/"],
+  ["搜尋政府開放資料",webSearch(quoted+" site:data.gov.tw")]
+ ];
+ $("official-links").replaceChildren(...official.map(([label,url])=>externalLink(label,url,"resource-link")));
+ $("official-description").textContent="以「"+name+"」查詢官方紀錄；平台入口可進一步設定條件。";
+ const discussions=[
+  ["網頁搜尋",webSearch(quoted)],["新聞搜尋",webSearch(quoted,true)],
+  ["YouTube","https://www.youtube.com/results?search_query="+encodeURIComponent(name)],
+  ["PTT",webSearch(quoted+" site:ptt.cc")],["Dcard",webSearch(quoted+" site:dcard.tw")],
+  ["Threads",webSearch(quoted+" (site:threads.com OR site:threads.net)")]
+ ];
+ $("discussion-links").replaceChildren(...discussions.map(([label,url])=>externalLink(label,url,"resource-link")));
+ $("discussion-description").textContent="以「"+name+"」開啟外部搜尋；PTT、Dcard 與 Threads 使用搜尋引擎查詢。討論內容不等於事實。";
+ const verify=[
+  ["搜政府資料",webSearch(quoted+" site:gov.tw")],["搜立法院資料",webSearch(quoted+" site:ly.gov.tw")],
+  ["搜「姓名 + 政策」",webSearch(quoted+" 政策")],["搜「姓名 + 爭議」",webSearch(quoted+" 爭議")],
+  ["搜「姓名 + 判決」",webSearch(quoted+" 判決")],["搜近期新聞",webSearch(quoted,true)]
+ ];
+ $("verification-links").replaceChildren(...verify.map(([label,url])=>externalLink(label,url,"resource-link")));
+}
+function showLoading(visible) {
+ clearInterval(loadingTimer);loadingTimer=null;
+ $("loading").hidden=!visible;$("submit").disabled=visible;
+ $("result-content").setAttribute("aria-busy",String(visible));
+ if(visible) {
+  let step=0;$("loading-text").textContent=MESSAGES[0];
+  loadingTimer=setInterval(()=>{$("loading-text").textContent=MESSAGES[Math.min(++step,MESSAGES.length-1)];},2300);
+ }
+}
+function showError(message,neutral=false) {
+ $("status").textContent=message;$("status").className=neutral?"notice neutral":"notice";$("status").hidden=!message;
+}
+async function searchPerson(event) {
+ event?.preventDefault();
+ const name=$("person-name").value.trim();
+ if(!name) {
+  $("form-error").textContent="請先輸入政治人物姓名。";$("form-error").hidden=false;$("person-name").setAttribute("aria-invalid","true");$("person-name").focus();return;
+ }
+ activeController?.abort();
+ const run=++generation,controller=new AbortController();activeController=controller;
+ const timespan=$("timespan").value,maxrecords=$("maxrecords").value;
+ $("form-error").hidden=true;$("person-name").removeAttribute("aria-invalid");
+ $("results").hidden=false;$("result-content").hidden=false;$("start-note").hidden=true;$("guide").hidden=true;
+ $("result-title").textContent="「"+name+"」的查證工作區";
+ $("result-meta").textContent="查詢範圍：最近 "+parseInt(timespan,10)+" 天 · 最多 "+maxrecords+" 則新聞";
+ articles=[];selectedFilter="all";newsState="loading";
+ showError("");createVerificationLinks(name);renderProfile(name,null,null);renderFilters();renderNews();showLoading(true);
+ try {
+  const wikiTask=fetchWikipedia(name,controller.signal).then(result=>{if(run===generation) renderProfile(name,result,null);return result;});
+  const outcomes=await Promise.allSettled([wikiTask,fetchWikidata(name,controller.signal)]);
+  if(run!==generation || controller.signal.aborted) return;
+  const wiki=outcomes[0].status==="fulfilled"?outcomes[0].value:{ok:false};
+  const data=outcomes[1].status==="fulfilled"?outcomes[1].value:{ok:false};
+  const mismatch=Boolean(wiki.value?.qid && data.value?.qid && wiki.value.qid!==data.value.qid);
+  if(mismatch) data.value=null; // Never borrow an English name from a different entity.
+  renderProfile(name,wiki,data);
+  const news=await fetchGdeltNews(name,data.value?.english,timespan,maxrecords,controller.signal);
+  if(run!==generation || controller.signal.aborted) return;
+  articles=news.ok?news.value:[];newsState=news.ok?"ready":"error";renderFilters();renderNews();
+  const failed=[!wiki.ok?"Wikipedia":null,!data.ok?"Wikidata":null,!news.ok?"GDELT":null].filter(Boolean);
+  if(failed.length===3) showError("目前無法取得即時資料，你仍可以使用下方的查證搜尋工具。");
+  else if(failed.length) showError(failed.join("、")+" 暫時無法取得；其他已取得的資料與外部查證入口仍可使用。");
+  else if(!wiki.value && !data.value && !articles.length) showError("🤖 我翻了一圈，目前沒有找到足夠資料。請確認姓名，或使用下方外部搜尋。",true);
+  else showError("🤖 找到了！不過先別急著下結論，我們看看來源。",true);
+  if(mismatch) $("status").append(document.createTextNode(" 人物來源的識別碼不一致；新聞已改用原始姓名搜尋，請核對人物身分。"));
+  if(news.omitted) $("status").append(document.createTextNode(" 部分新聞缺少有效標題或網址，已略過。"));
+  const checked=new Intl.DateTimeFormat("zh-TW",{timeZone:"Asia/Taipei",dateStyle:"short",timeStyle:"short"}).format(new Date());
+  $("result-meta").textContent+=" · 查詢時間："+checked+"（台北）"+(news.ok?" · 新聞搜尋詞："+news.term:"");
+ } catch(error) {
+  if(run!==generation || controller.signal.aborted) return;
+  newsState="error";renderNews();showError("整理資料時遇到問題，請稍後再試。官方與外部搜尋入口仍可使用。");
+  console.warn("PoliCheck:",error.message);
+ } finally {
+  if(run===generation) { showLoading(false);activeController=null; }
+ }
+}
+const initialOfficial=$("official-links").cloneNode(true);
+function clearSearch() {
+ ++generation;activeController?.abort();activeController=null;showLoading(false);
+ $("search-form").reset();$("form-error").hidden=true;$("person-name").removeAttribute("aria-invalid");
+ $("results").hidden=true;$("result-content").hidden=true;$("guide").hidden=false;$("start-note").hidden=false;showError("");
+ $("official-links").replaceChildren(...Array.from(initialOfficial.cloneNode(true).children));
+ $("official-description").textContent="回到原始紀錄，查閱提案、公告與公開資料。";
+ $("discussion-description").textContent="輸入姓名後，可前往各平台搜尋。網路討論是觀點，請搭配可靠來源判讀。";
+ $("discussion-links").replaceChildren();articles=[];selectedFilter="all";newsState="idle";$("person-name").focus();
+}
+document.querySelector('a[href="#guide"]').addEventListener("click",()=>{$("guide").hidden=false;});
+$("search-form").addEventListener("submit",searchPerson);
+$("clear").addEventListener("click",clearSearch);
+$("person-name").addEventListener("input",()=>{$("form-error").hidden=true;$("person-name").removeAttribute("aria-invalid");});
+</script>
+</body>
+</html>
