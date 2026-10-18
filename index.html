@@ -31,7 +31,7 @@
 <form id="search-form" novalidate>
 <label class="search-label" for="person-name">你想了解哪位政治人物？</label>
 <div class="search-row"><div class="input-wrap"><span class="search-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 5 5"/></svg></span><input id="person-name" name="name" type="search" placeholder="輸入政治人物姓名" maxlength="80" autocomplete="off" enterkeyhint="search" aria-describedby="form-error"></div><button id="submit" class="primary" type="submit">開始查證 <span aria-hidden="true">↗</span></button><button id="clear" class="clear" type="button">清除</button></div>
-<div class="options"><div class="option"><label for="timespan">新聞時間</label><select id="timespan"><option value="7d">最近 7 天</option><option value="30d" selected>最近 30 天</option><option value="90d">最近 90 天</option></select></div><div class="option"><label for="maxrecords">新聞數量</label><select id="maxrecords"><option value="10">10 則</option><option value="20" selected>20 則</option><option value="30">30 則</option></select></div><span class="privacy">查詢時會將姓名傳送至資料來源服務</span></div>
+<div class="options"><div class="option"><label for="timespan">新聞時間</label><select id="timespan"><option value="7d">最近 7 天</option><option value="30d" selected>最近 30 天</option><option value="90d">最近 90 天</option></select></div><div class="option"><label for="maxrecords">新聞數量</label><select id="maxrecords"><option value="10" selected>10 則</option><option value="20">20 則</option><option value="30">30 則</option></select></div><span class="privacy">查詢時會將姓名傳送至資料來源服務</span></div>
 <p id="form-error" class="form-error" role="alert" hidden></p>
 </form>
 </section>
@@ -81,6 +81,20 @@ const RULES = [
 const MESSAGES = ["🤖 收到！我先確認這個人是誰……","📚 正在翻人物資料……","📰 正在找近期相關新聞……","🏛️ 正在準備官方查證入口……","🔍 快好了，我正在整理來源……"];
 let activeController = null, generation = 0, loadingTimer = null;
 let articles = [], selectedFilter = "all", newsState = "idle";
+const GDELT_MIN_INTERVAL_MS = 6500;
+const GDELT_CACHE_TTL_MS = 15 * 60 * 1000;
+const GDELT_DEFAULT_COOLDOWN_MS = 60 * 1000;
+const GDELT_TIMEOUT_MS = 30000;
+const GDELT_STORAGE_PREFIX = "policheck:gdelt:v1:";
+const gdeltMemory = new Map();
+let gdeltLastRequestAt = 0, gdeltCooldownUntil = 0;
+let newsContext = {name:"",cooldownUntil:0,fromCache:false};
+const NEWS_MESSAGES = {
+ "rate-limit":"GDELT 新聞服務目前受到流量限制，暫時無法取得即時新聞。人物資料與其他查證功能仍可正常使用。",
+ timeout:"GDELT 新聞服務回應時間過長，已停止等待。你仍可使用外部新聞搜尋。",
+ error:"目前無法取得 GDELT 新聞資料，你仍可使用外部新聞搜尋。",
+ empty:"目前在選定時間範圍內沒有找到相關 GDELT 新聞。"
+};
 function el(tag, text, className) {
  const node = document.createElement(tag);
  if(text !== undefined) node.textContent = text;
@@ -112,18 +126,32 @@ function nameScore(title,name) {
 }
 async function fetchJSON(url,signal,timeoutMs=10000) {
  const controller=new AbortController();
+ let timedOut=false;
  const cancel=()=>controller.abort();
  if(signal?.aborted) controller.abort();
  else signal?.addEventListener("abort",cancel,{once:true});
- const timer=setTimeout(()=>controller.abort(),timeoutMs);
+ const timer=setTimeout(()=>{timedOut=true;controller.abort();},timeoutMs);
  try {
   const response=await fetch(url,{signal:controller.signal,credentials:"omit",referrerPolicy:"no-referrer"});
-  if(!response.ok) throw new Error("HTTP "+response.status);
+  if(!response.ok) {
+   const error=new Error("HTTP "+response.status);
+   error.status=response.status;
+   error.retryAfter=response.headers.get("Retry-After");
+   throw error;
+  }
   const text=await response.text();
   let data;
   try { data=JSON.parse(text); } catch { throw new Error("服務回傳非 JSON 資料"); }
   if(!data || typeof data!=="object" || Array.isArray(data) || data.error) throw new Error("資料格式異常");
   return data;
+ } catch(error) {
+  // An HTTP response, especially 429, takes precedence over timer/cancel flags.
+  if(!error.status && (signal?.aborted || timedOut)) {
+   const failure=new Error(signal?.aborted?"Request cancelled":"Request timed out");
+   failure.code=signal?.aborted?"cancelled":"timeout";
+   throw failure;
+  }
+  throw error;
  } finally { clearTimeout(timer); signal?.removeEventListener("abort",cancel); }
 }
 async function fetchWikipedia(name,signal) {
@@ -154,28 +182,91 @@ async function fetchWikidata(name,signal) {
   return {ok:true,value:{qid:entity.id,name:labels["zh-tw"]?.value || labels["zh-hant"]?.value || labels.zh?.value || name,english:labels.en?.value || "",description:descriptions["zh-tw"]?.value || descriptions["zh-hant"]?.value || descriptions.zh?.value || descriptions.en?.value || ""}};
  } catch(error) { return {ok:false,error:signal.aborted?"cancelled":error.message}; }
 }
-async function fetchGdeltNews(name,english,timespan,maxrecords,signal) {
+function readGdeltStorage(key) {
+ if(gdeltMemory.has(key)) return gdeltMemory.get(key);
  try {
-  // Quoting isolates the name from GDELT query operators; URLSearchParams handles URL encoding.
-  const phrase=value=>'"'+value.replace(/["\\\u0000-\u001f]/g," ").trim()+'"';
-  const first=english || name;
-  const request=async term=>{
-   const url=apiURL(ENDPOINTS.news,{query:phrase(term),mode:"ArtList",maxrecords,format:"json",timespan});
-   const data=await fetchJSON(url,signal,30000);
-   if(!Array.isArray(data.articles)) {
-    if(Object.keys(data).length===0) return [];
-    throw new Error("新聞服務回傳格式異常");
+  const stored=sessionStorage.getItem(GDELT_STORAGE_PREFIX+key);
+  if(stored!==null) return JSON.parse(stored);
+ } catch { /* Storage may be disabled, full, or contain invalid JSON. */ }
+ return gdeltMemory.get(key) ?? null;
+}
+function writeGdeltStorage(key,value) {
+ gdeltMemory.set(key,value);
+ try { sessionStorage.setItem(GDELT_STORAGE_PREFIX+key,JSON.stringify(value)); } catch { /* Keep the in-memory fallback. */ }
+}
+function getGdeltCooldownUntil() {
+ const stored=readGdeltStorage("cooldownUntil");
+ if(Number.isFinite(stored)) gdeltCooldownUntil=Math.max(gdeltCooldownUntil,stored);
+ return gdeltCooldownUntil;
+}
+function retryAfterMilliseconds(value,now=Date.now()) {
+ if(typeof value!=="string" || !value.trim()) return GDELT_DEFAULT_COOLDOWN_MS;
+ const text=value.trim();
+ if(/^\d+$/.test(text)) {
+  const ms=Number(text)*1000;
+  return Number.isFinite(ms) && Number.isSafeInteger(now+ms)?ms:GDELT_DEFAULT_COOLDOWN_MS;
+ }
+ const date=Date.parse(text);
+ return Number.isFinite(date) && date>now?date-now:GDELT_DEFAULT_COOLDOWN_MS;
+}
+function throwIfCancelled(signal) {
+ if(signal?.aborted) {
+  const error=new Error("Request cancelled");error.code="cancelled";throw error;
+ }
+}
+function waitForGdelt(ms,signal) {
+ return new Promise((resolve,reject)=>{
+  const cancel=()=>{clearTimeout(timer);signal?.removeEventListener("abort",cancel);const error=new Error("Request cancelled");error.code="cancelled";reject(error);};
+  const timer=setTimeout(()=>{signal?.removeEventListener("abort",cancel);resolve();},ms);
+  if(signal?.aborted) cancel();
+  else signal?.addEventListener("abort",cancel,{once:true});
+ });
+}
+function validGdeltData(data) {
+ return data && Array.isArray(data.articles) && data.articles.every(a=>a && typeof a.title==="string" && typeof a.url==="string");
+}
+function gdeltResult(data,term,maxrecords,fromCache=false) {
+ const valid=data.articles.filter(a=>a.title.trim() && safeURL(a.url)).slice(0,Number(maxrecords));
+ return {ok:true,state:valid.length?"ready":"empty",value:valid.map(a=>({...a,category:classifyArticle(a.title)})),term,fromCache,omitted:data.articles.length-valid.length};
+}
+async function fetchGdeltNews(name,english,timespan,maxrecords,signal) {
+ const term=(english || name).replace(/["\\\u0000-\u001f]/g," ").trim();
+ const key="cache:"+JSON.stringify([term,timespan,String(maxrecords)]);
+ try {
+  // Recheck after each abortable timer; concurrent callers cannot reserve the same slot.
+  for(;;) {
+   throwIfCancelled(signal);
+   const now=Date.now(),cooldownUntil=getGdeltCooldownUntil();
+   if(cooldownUntil>now) return {ok:false,state:"rate-limit",cooldownUntil};
+   const cached=readGdeltStorage(key);
+   if(cached && Number.isFinite(cached.savedAt) && now>=cached.savedAt && now-cached.savedAt<GDELT_CACHE_TTL_MS && validGdeltData(cached.data)) {
+    return gdeltResult(cached.data,term,maxrecords,true);
    }
-   return data.articles;
-  };
-  let results=await request(first),term=first;
-  // Only an empty successful English query triggers one sequential original-name query.
-  if(!results.length && english && normalized(english)!==normalized(name) && !signal.aborted) {
-   results=await request(name);term=name;
+   const stored=readGdeltStorage("lastRequestAt");
+   if(Number.isFinite(stored)) gdeltLastRequestAt=Math.max(gdeltLastRequestAt,stored);
+   const remaining=gdeltLastRequestAt+GDELT_MIN_INTERVAL_MS-now;
+   if(remaining<=0) break;
+   await waitForGdelt(remaining,signal);
   }
-  const valid=results.filter(a=>a && typeof a.title==="string" && a.title.trim() && safeURL(a.url)).slice(0,Number(maxrecords));
-  return {ok:true,value:valid.map(a=>({...a,category:classifyArticle(a.title)})),term,omitted:results.length-valid.length};
- } catch(error) { return {ok:false,error:signal.aborted?"cancelled":error.message}; }
+  throwIfCancelled(signal);
+  const url=apiURL(ENDPOINTS.news,{query:'"'+term+'"',mode:"ArtList",maxrecords,format:"json",timespan});
+  // Record only immediately before a real request; cache hits and cancelled waits do not count.
+  gdeltLastRequestAt=Date.now();writeGdeltStorage("lastRequestAt",gdeltLastRequestAt);
+  const data=await fetchJSON(url,signal,GDELT_TIMEOUT_MS);
+  throwIfCancelled(signal);
+  if(!validGdeltData(data)) throw new Error("新聞服務回傳格式異常");
+  writeGdeltStorage(key,{savedAt:Date.now(),data});
+  // One request per search, including successful empty results. Never automatically retry.
+  return gdeltResult(data,term,maxrecords);
+ } catch(error) {
+  if(error.status===429) {
+   gdeltCooldownUntil=Math.max(getGdeltCooldownUntil(),Date.now()+retryAfterMilliseconds(error.retryAfter));
+   writeGdeltStorage("cooldownUntil",gdeltCooldownUntil);
+   return {ok:false,state:"rate-limit",status:429,cooldownUntil:gdeltCooldownUntil};
+  }
+  if(signal?.aborted || error.code==="cancelled") return {ok:false,state:"cancelled"};
+  return {ok:false,state:error.code==="timeout"?"timeout":"error",status:error.status,error:error.message};
+ }
 }
 function classifyArticle(title) {
  const text=String(title || "").toLowerCase();
@@ -234,10 +325,20 @@ function renderFilters() {
 }
 function renderNews() {
  const box=$("news-list");box.replaceChildren();
- $("news-count").textContent=newsState==="loading"?"查詢中":newsState==="error"?"暫時無法取得":"共找到 "+articles.length+" 則";
+ const stateLabels={loading:"查詢中","rate-limit":"流量限制",timeout:"回應逾時",error:"暫時無法取得"};
+ $("news-count").textContent=stateLabels[newsState] || "共找到 "+articles.length+" 則";
  $("filter-summary").textContent="";
- if(newsState==="loading") { box.append(emptyState("政績查查正在整理新聞來源","人物資料與新聞分開查詢，請稍候。"));return; }
- if(newsState==="error") { box.append(emptyState("新聞來源暫時沒有回應","可能是服務限流、連線問題或逾時。可稍後重試，或使用下方「搜近期新聞」。"));return; }
+ if(newsState==="loading") { box.append(emptyState("政績查查正在整理新聞來源","人物資料會先顯示。為降低限流風險，新聞請求之間至少間隔 6.5 秒。"));return; }
+ if(NEWS_MESSAGES[newsState]) {
+  let detail=newsState==="empty"?"可延長新聞時間或前往外部來源搜尋；查無結果不代表事件不存在。":"官方資料與外部搜尋入口仍可使用。";
+  if(newsState==="rate-limit" && newsContext.cooldownUntil>Date.now()) {
+   const until=new Intl.DateTimeFormat("zh-TW",{timeZone:"Asia/Taipei",hour:"2-digit",minute:"2-digit",second:"2-digit",hour12:false}).format(new Date(newsContext.cooldownUntil));
+   detail="請於 "+until+"（台北時間）之後手動重新查詢；不會自動重試。";
+  }
+  const card=emptyState(NEWS_MESSAGES[newsState],detail);
+  const link=externalLink("搜尋近期新聞 ↗",webSearch('"'+newsContext.name.replace(/"/g,"")+'"',true),"resource-link");
+  link.style.marginTop="18px";card.append(link);box.append(card);return;
+ }
  const filtered=articles.filter(a=>selectedFilter==="all" || a.category===selectedFilter);
  if(!filtered.length) { box.append(emptyState(articles.length?"這個分類目前沒有報導":"🤖 我翻了一圈，目前沒有找到足夠資料。",articles.length?"試試其他分類，或查看全部報導。":"試試完整姓名、延長新聞時間，或直接前往外部來源搜尋。查無結果不代表事件不存在。"));return; }
  $("filter-summary").textContent="顯示 "+filtered.length+" 則"+(selectedFilter==="all"?"報導":CATEGORIES[selectedFilter]+"相關報導");
@@ -304,7 +405,7 @@ async function searchPerson(event) {
  $("results").hidden=false;$("result-content").hidden=false;$("start-note").hidden=true;$("guide").hidden=true;
  $("result-title").textContent="「"+name+"」的查證工作區";
  $("result-meta").textContent="查詢範圍：最近 "+parseInt(timespan,10)+" 天 · 最多 "+maxrecords+" 則新聞";
- articles=[];selectedFilter="all";newsState="loading";
+ articles=[];selectedFilter="all";newsState="loading";newsContext={name,cooldownUntil:0,fromCache:false};
  showError("");createVerificationLinks(name);renderProfile(name,null,null);renderFilters();renderNews();showLoading(true);
  try {
   const wikiTask=fetchWikipedia(name,controller.signal).then(result=>{if(run===generation) renderProfile(name,result,null);return result;});
@@ -317,16 +418,18 @@ async function searchPerson(event) {
   renderProfile(name,wiki,data);
   const news=await fetchGdeltNews(name,data.value?.english,timespan,maxrecords,controller.signal);
   if(run!==generation || controller.signal.aborted) return;
-  articles=news.ok?news.value:[];newsState=news.ok?"ready":"error";renderFilters();renderNews();
+  articles=news.ok?news.value:[];newsState=news.state;
+  newsContext={name,cooldownUntil:news.cooldownUntil || 0,fromCache:Boolean(news.fromCache)};renderFilters();renderNews();
   const failed=[!wiki.ok?"Wikipedia":null,!data.ok?"Wikidata":null,!news.ok?"GDELT":null].filter(Boolean);
-  if(failed.length===3) showError("目前無法取得即時資料，你仍可以使用下方的查證搜尋工具。");
+  if(!news.ok) showError(NEWS_MESSAGES[news.state] || NEWS_MESSAGES.error);
   else if(failed.length) showError(failed.join("、")+" 暫時無法取得；其他已取得的資料與外部查證入口仍可使用。");
   else if(!wiki.value && !data.value && !articles.length) showError("🤖 我翻了一圈，目前沒有找到足夠資料。請確認姓名，或使用下方外部搜尋。",true);
   else showError("🤖 找到了！不過先別急著下結論，我們看看來源。",true);
+  if(!news.ok && (!wiki.ok || !data.ok)) $("status").append(document.createTextNode(" "+failed.filter(source=>source!=="GDELT").join("、")+" 也暫時無法取得，請使用外部查證入口。"));
   if(mismatch) $("status").append(document.createTextNode(" 人物來源的識別碼不一致；新聞已改用原始姓名搜尋，請核對人物身分。"));
   if(news.omitted) $("status").append(document.createTextNode(" 部分新聞缺少有效標題或網址，已略過。"));
   const checked=new Intl.DateTimeFormat("zh-TW",{timeZone:"Asia/Taipei",dateStyle:"short",timeStyle:"short"}).format(new Date());
-  $("result-meta").textContent+=" · 查詢時間："+checked+"（台北）"+(news.ok?" · 新聞搜尋詞："+news.term:"");
+  $("result-meta").textContent+=" · 查詢時間："+checked+"（台北）"+(news.ok?" · 新聞搜尋詞："+news.term:"")+(news.fromCache?" · 新聞使用 15 分鐘內的快取資料":"");
  } catch(error) {
   if(run!==generation || controller.signal.aborted) return;
   newsState="error";renderNews();showError("整理資料時遇到問題，請稍後再試。官方與外部搜尋入口仍可使用。");
@@ -343,7 +446,7 @@ function clearSearch() {
  $("official-links").replaceChildren(...Array.from(initialOfficial.cloneNode(true).children));
  $("official-description").textContent="回到原始紀錄，查閱提案、公告與公開資料。";
  $("discussion-description").textContent="輸入姓名後，可前往各平台搜尋。網路討論是觀點，請搭配可靠來源判讀。";
- $("discussion-links").replaceChildren();articles=[];selectedFilter="all";newsState="idle";$("person-name").focus();
+ $("discussion-links").replaceChildren();articles=[];selectedFilter="all";newsState="idle";newsContext={name:"",cooldownUntil:0,fromCache:false};$("person-name").focus();
 }
 document.querySelector('a[href="#guide"]').addEventListener("click",()=>{$("guide").hidden=false;});
 $("search-form").addEventListener("submit",searchPerson);
