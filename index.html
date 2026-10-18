@@ -35,7 +35,7 @@
 <p id="form-error" class="form-error" role="alert" hidden></p>
 </form>
 </section>
-<div id="sources" class="source-strip"><span>公開資料來源</span><span class="separator"></span><a href="https://zh.wikipedia.org/" target="_blank" rel="noopener noreferrer">Wikipedia ↗</a><a href="https://www.wikidata.org/" target="_blank" rel="noopener noreferrer">Wikidata ↗</a><a href="https://www.gdeltproject.org/" target="_blank" rel="noopener noreferrer">GDELT Project ↗</a><span>・資料可用性依各來源而異</span></div>
+<div id="sources" class="source-strip"><span>公開資料來源</span><span class="separator"></span><a href="https://zh.wikipedia.org/" target="_blank" rel="noopener noreferrer">Wikipedia ↗</a><a href="https://www.wikidata.org/" target="_blank" rel="noopener noreferrer">Wikidata ↗</a><a href="https://freenewsapi.ai/" target="_blank" rel="noopener noreferrer">FreeNewsAPI ↗</a><a href="https://www.gdeltproject.org/" target="_blank" rel="noopener noreferrer">GDELT Project ↗</a><span>・資料可用性依各來源而異</span></div>
 <noscript><p class="noscript">請啟用 JavaScript 以搜尋人物與新聞。你仍可透過下方官方網站查閱資料。</p></noscript>
 <div id="loading" class="loading" role="status" hidden><div class="robot robot-mini" aria-hidden="true"><i class="eyes"></i><i class="mouth"></i></div><div><p id="loading-text"></p><small><span class="spinner" aria-hidden="true"></span>連線查詢中，已取得的資料會先顯示。</small></div></div>
 <p id="status" role="status" class="notice" hidden></p>
@@ -50,7 +50,7 @@
 <div>
 <div id="result-content" hidden>
 <section id="profile" class="card profile" aria-label="人物基本資料"></section>
-<section class="news-section" aria-labelledby="news-title"><div class="section-top"><h2 id="news-title">近期相關新聞</h2><span class="pill" id="news-count">等待查詢</span></div><p class="news-note">來源：GDELT。僅依標題關鍵字分類，不代表事件成立；未擷取新聞全文。日期為 GDELT 收錄日期，保留來源排序。</p><div id="filters" class="filters" role="group" aria-label="依報導主題篩選"></div><p id="filter-summary" class="small" role="status" style="margin-bottom:12px"></p><div id="news-list" class="news-list"></div></section>
+<section class="news-section" aria-labelledby="news-title"><div class="section-top"><h2 id="news-title">近期相關新聞</h2><span class="pill" id="news-count">等待查詢</span></div><p id="news-source" class="news-note">來源：等待查詢。僅依標題關鍵字分類，不代表事件成立；未擷取新聞全文。</p><p id="news-provider-note" class="news-note" hidden></p><div id="filters" class="filters" role="group" aria-label="依報導主題篩選"></div><p id="filter-summary" class="small" role="status" style="margin-bottom:12px"></p><div id="news-list" class="news-list"></div></section>
 <section class="toolbox" aria-labelledby="tools-title"><h2 id="tools-title">進一步查證</h2><div id="verification-links" class="tool-links"></div></section>
 </div>
 <section id="start-note" class="card">
@@ -70,6 +70,11 @@
 "use strict";
 const $ = id => document.getElementById(id);
 const ENDPOINTS = {wiki:"https://zh.wikipedia.org/w/api.php",data:"https://www.wikidata.org/w/api.php",news:"https://api.gdeltproject.org/api/v2/doc/doc"};
+const FREE_NEWS_ENDPOINT = "https://freenewsapi.ai/v1/search";
+const FREE_NEWS_TIMEOUT_MS = 15000;
+const NEWS_CACHE_TTL_MS = 15 * 60 * 1000;
+const NEWS_STORAGE_PREFIX = "policheck:news:v2:";
+const newsMemory = new Map();
 const CATEGORIES = {all:"全部",policy:"政策／施政",election:"選舉",controversy:"爭議／質疑",legal:"司法／調查",other:"其他"};
 // Priority is intentional: legal > controversy > election > policy > other.
 const RULES = [
@@ -88,12 +93,13 @@ const GDELT_TIMEOUT_MS = 30000;
 const GDELT_STORAGE_PREFIX = "policheck:gdelt:v1:";
 const gdeltMemory = new Map();
 let gdeltLastRequestAt = 0, gdeltCooldownUntil = 0;
-let newsContext = {name:"",cooldownUntil:0,fromCache:false};
+let newsContext = {name:"",provider:"",cooldownUntil:0,fromCache:false,notice:""};
+const NEWS_UNAVAILABLE_MESSAGE = "目前無法取得即時新聞資料，你仍可使用外部新聞搜尋與其他查證工具。";
 const NEWS_MESSAGES = {
  "rate-limit":"GDELT 新聞服務目前受到流量限制，暫時無法取得即時新聞。人物資料與其他查證功能仍可正常使用。",
  timeout:"GDELT 新聞服務回應時間過長，已停止等待。你仍可使用外部新聞搜尋。",
  error:"目前無法取得 GDELT 新聞資料，你仍可使用外部新聞搜尋。",
- empty:"目前在選定時間範圍內沒有找到相關 GDELT 新聞。"
+ empty:"目前在選定時間範圍內沒有找到相關新聞。"
 };
 function el(tag, text, className) {
  const node = document.createElement(tag);
@@ -141,8 +147,12 @@ async function fetchJSON(url,signal,timeoutMs=10000) {
   }
   const text=await response.text();
   let data;
-  try { data=JSON.parse(text); } catch { throw new Error("服務回傳非 JSON 資料"); }
-  if(!data || typeof data!=="object" || Array.isArray(data) || data.error) throw new Error("資料格式異常");
+  try { data=JSON.parse(text); } catch {
+   const error=new Error("服務回傳非 JSON 資料");error.code="invalid-response";throw error;
+  }
+  if(!data || typeof data!=="object" || Array.isArray(data) || data.error) {
+   const error=new Error("資料格式異常");error.code="invalid-response";throw error;
+  }
   return data;
  } catch(error) {
   // An HTTP response, especially 429, takes precedence over timer/cancel flags.
@@ -181,6 +191,77 @@ async function fetchWikidata(name,signal) {
   const labels=entity.labels || {},descriptions=entity.descriptions || {};
   return {ok:true,value:{qid:entity.id,name:labels["zh-tw"]?.value || labels["zh-hant"]?.value || labels.zh?.value || name,english:labels.en?.value || "",description:descriptions["zh-tw"]?.value || descriptions["zh-hant"]?.value || descriptions.zh?.value || descriptions.en?.value || ""}};
  } catch(error) { return {ok:false,error:signal.aborted?"cancelled":error.message}; }
+}
+function buildFreeNewsURL(name,timespan,maxrecords) {
+ const range=["7d","30d","90d"].includes(timespan)?timespan:"30d";
+ return apiURL(FREE_NEWS_ENDPOINT,{q:name,size:String(maxrecords),date:range,sort:"relevance"});
+}
+function validFreeNewsData(data) {
+ return data && Array.isArray(data.results) && data.results.every(item=>item && typeof item.title==="string" && typeof item.url==="string");
+}
+function normalizeFreeNewsArticle(item) {
+ const url=safeURL(item.url);
+ if(!url || !item.title.trim()) return null;
+ const field=value=>typeof value==="string"?value.trim():"";
+ return {title:item.title,url,domain:field(item.host) || field(item.sitename) || new URL(url).hostname,
+  seendate:field(item.published_at),language:field(item.lang) || "未提供",sourcecountry:field(item.country) || "未提供",
+  category:classifyArticle(item.title),provider:"FreeNewsAPI"};
+}
+function newsCacheKey(name,timespan,maxrecords) {
+ return JSON.stringify(["freenewsapi",name,timespan,String(maxrecords)]);
+}
+function getNewsCache(name,timespan,maxrecords) {
+ const key=newsCacheKey(name,timespan,maxrecords);
+ try {
+  const cached=newsMemory.get(key) || JSON.parse(sessionStorage.getItem(NEWS_STORAGE_PREFIX+key));
+  const age=Date.now()-cached?.savedAt;
+  if(cached && Number.isFinite(cached.savedAt) && age>=0 && age<NEWS_CACHE_TTL_MS && validFreeNewsData(cached.data)) return cached.data;
+ } catch { /* Disabled storage or invalid cache must not break live queries. */ }
+ return null;
+}
+function setNewsCache(name,timespan,maxrecords,data) {
+ if(!validFreeNewsData(data)) return;
+ const key=newsCacheKey(name,timespan,maxrecords),cached={savedAt:Date.now(),data};
+ newsMemory.set(key,cached);
+ try { sessionStorage.setItem(NEWS_STORAGE_PREFIX+key,JSON.stringify(cached)); } catch { /* Memory cache remains available. */ }
+}
+function freeNewsResult(data,name,maxrecords,fromCache=false) {
+ const normalizedItems=data.results.map(normalizeFreeNewsArticle).filter(Boolean);
+ const value=normalizedItems.slice(0,Number(maxrecords));
+ return {ok:true,value,provider:"FreeNewsAPI",state:value.length?"ready":"empty",term:name,fromCache,omitted:data.results.length-normalizedItems.length};
+}
+async function fetchFreeNews(name,timespan,maxrecords,signal) {
+ try {
+  throwIfCancelled(signal);
+  const cached=getNewsCache(name,timespan,maxrecords);
+  if(cached) return freeNewsResult(cached,name,maxrecords,true);
+  // One request using the user's original name; no alternate-name retries or pagination.
+  const data=await fetchJSON(buildFreeNewsURL(name,timespan,maxrecords),signal,FREE_NEWS_TIMEOUT_MS);
+  throwIfCancelled(signal);
+  if(!validFreeNewsData(data)) {
+   const error=new Error("FreeNewsAPI 新聞資料格式異常");error.code="invalid-response";throw error;
+  }
+  const result=freeNewsResult(data,name,maxrecords);
+  if(data.results.length && !result.value.length) {
+   const error=new Error("FreeNewsAPI 未提供可用的新聞標題或網址");error.code="invalid-response";throw error;
+  }
+  setNewsCache(name,timespan,maxrecords,data);
+  return result;
+ } catch(error) {
+  if(signal?.aborted || error.code==="cancelled") return {ok:false,provider:"FreeNewsAPI",state:"cancelled",error:{type:"cancelled"}};
+  const type=error.status?"http":error.code || "network";
+  return {ok:false,provider:"FreeNewsAPI",state:type==="timeout"?"timeout":"error",error:{type,status:error.status,message:error.message}};
+ }
+}
+async function fetchNews(name,english,timespan,maxrecords,signal) {
+ const primary=await fetchFreeNews(name,timespan,maxrecords,signal);
+ if(signal?.aborted || primary.state==="cancelled") return {ok:false,state:"cancelled",provider:""};
+ if(primary.ok && primary.value.length) return primary;
+ // Sequential fallback only after FreeNewsAPI has settled; cancellation never starts GDELT.
+ const backup=await fetchGdeltNews(name,english,timespan,maxrecords,signal);
+ if(signal?.aborted || backup.state==="cancelled") return {ok:false,state:"cancelled",provider:""};
+ const notice=backup.ok?(primary.ok?"主要新聞來源在選定時間內沒有結果，本次改查 GDELT。":"主要新聞來源暫時無法取得，本次改由 GDELT 提供。") : "";
+ return {...backup,provider:backup.ok?"GDELT":"",primary,usedBackup:true,notice};
 }
 function readGdeltStorage(key) {
  if(gdeltMemory.has(key)) return gdeltMemory.get(key);
@@ -227,7 +308,7 @@ function validGdeltData(data) {
 }
 function gdeltResult(data,term,maxrecords,fromCache=false) {
  const valid=data.articles.filter(a=>a.title.trim() && safeURL(a.url)).slice(0,Number(maxrecords));
- return {ok:true,state:valid.length?"ready":"empty",value:valid.map(a=>({...a,category:classifyArticle(a.title)})),term,fromCache,omitted:data.articles.length-valid.length};
+ return {ok:true,state:valid.length?"ready":"empty",value:valid.map(a=>({...a,category:classifyArticle(a.title),provider:"GDELT"})),provider:"GDELT",term,fromCache,omitted:data.articles.length-valid.length};
 }
 async function fetchGdeltNews(name,english,timespan,maxrecords,signal) {
  const term=(english || name).replace(/["\\\u0000-\u001f]/g," ").trim();
@@ -275,11 +356,22 @@ function classifyArticle(title) {
 function formatDate(value) {
  if(typeof value!=="string" || !value) return "未提供日期";
  const match=/^(\d{4})(\d{2})(\d{2})T(\d{2})(\d{2})(\d{2})Z$/.exec(value);
- if(!match) return value;
+ if(!match) return formatISODate(value);
  const [,year,month,day,hour,minute,second]=match;
  const date=new Date(year+"-"+month+"-"+day+"T"+hour+":"+minute+":"+second+"Z");
  if(!Number.isFinite(date.getTime()) || date.getUTCMonth()+1!==Number(month) || date.getUTCDate()!==Number(day)) return value;
  return year+"/"+month+"/"+day;
+}
+function formatISODate(value) {
+ // FreeNewsAPI supplies ISO 8601 dates. Retain the source's calendar date.
+ const match=/^(\d{4})-(\d{2})-(\d{2})(?:[T ]|$)/.exec(value);
+ if(match) {
+  const [,year,month,day]=match,date=new Date(year+"-"+month+"-"+day+"T00:00:00Z");
+  if(value.includes("T") && !Number.isFinite(new Date(value).getTime())) return value;
+  if(Number.isFinite(date.getTime()) && date.getUTCMonth()+1===Number(month) && date.getUTCDate()===Number(day)) return year+"/"+month+"/"+day;
+  return value;
+ }
+ return value;
 }
 function robotNode() {
  const robot=el("div",undefined,"robot");robot.setAttribute("aria-hidden","true");
@@ -327,16 +419,24 @@ function renderNews() {
  const box=$("news-list");box.replaceChildren();
  const stateLabels={loading:"查詢中","rate-limit":"流量限制",timeout:"回應逾時",error:"暫時無法取得"};
  $("news-count").textContent=stateLabels[newsState] || "共找到 "+articles.length+" 則";
+ const source=newsState==="loading"?"查詢中":newsContext.provider || "目前無法取得即時新聞";
+ const dateNote=newsContext.provider==="FreeNewsAPI"?"日期為來源提供的發布日期；保留來源排序，筆數可能少於設定上限。":newsContext.provider==="GDELT"?"日期為 GDELT 收錄日期，保留來源排序。":"";
+ $("news-source").textContent="來源："+source+"。僅依標題關鍵字分類，不代表事件成立；未擷取新聞全文。"+dateNote;
+ $("news-provider-note").textContent=newsContext.notice || "";
+ $("news-provider-note").hidden=!newsContext.notice;
+ if(newsContext.notice) $("news-provider-note").append(document.createTextNode(" "),externalLink("搜尋近期新聞 ↗",webSearch('"'+newsContext.name.replace(/"/g,"")+'"',true)));
  $("filter-summary").textContent="";
- if(newsState==="loading") { box.append(emptyState("政績查查正在整理新聞來源","人物資料會先顯示。為降低限流風險，新聞請求之間至少間隔 6.5 秒。"));return; }
+ if(newsState==="loading") { box.append(emptyState("政績查查正在整理新聞來源","人物資料會先顯示。優先查詢 FreeNewsAPI，必要時再使用 GDELT 備援。"));return; }
  if(NEWS_MESSAGES[newsState]) {
   let detail=newsState==="empty"?"可延長新聞時間或前往外部來源搜尋；查無結果不代表事件不存在。":"官方資料與外部搜尋入口仍可使用。";
+  if(newsState==="timeout") detail="GDELT 備援服務回應時間過長，已停止等待。";
+  if(newsState==="rate-limit") detail="GDELT 備援服務目前受到流量限制，不會自動重試。";
   if(newsState==="rate-limit" && newsContext.cooldownUntil>Date.now()) {
    const until=new Intl.DateTimeFormat("zh-TW",{timeZone:"Asia/Taipei",hour:"2-digit",minute:"2-digit",second:"2-digit",hour12:false}).format(new Date(newsContext.cooldownUntil));
-   detail="請於 "+until+"（台北時間）之後手動重新查詢；不會自動重試。";
+   detail+="請於 "+until+"（台北時間）之後手動重新查詢。";
   }
-  const card=emptyState(NEWS_MESSAGES[newsState],detail);
-  const link=externalLink("搜尋近期新聞 ↗",webSearch('"'+newsContext.name.replace(/"/g,"")+'"',true),"resource-link");
+  const card=emptyState(newsState==="empty"?NEWS_MESSAGES.empty:NEWS_UNAVAILABLE_MESSAGE,detail);
+  const link=externalLink("搜尋近期新聞",webSearch('"'+newsContext.name.replace(/"/g,"")+'"',true),"resource-link");
   link.style.marginTop="18px";card.append(link);box.append(card);return;
  }
  const filtered=articles.filter(a=>selectedFilter==="all" || a.category===selectedFilter);
@@ -405,7 +505,7 @@ async function searchPerson(event) {
  $("results").hidden=false;$("result-content").hidden=false;$("start-note").hidden=true;$("guide").hidden=true;
  $("result-title").textContent="「"+name+"」的查證工作區";
  $("result-meta").textContent="查詢範圍：最近 "+parseInt(timespan,10)+" 天 · 最多 "+maxrecords+" 則新聞";
- articles=[];selectedFilter="all";newsState="loading";newsContext={name,cooldownUntil:0,fromCache:false};
+ articles=[];selectedFilter="all";newsState="loading";newsContext={name,provider:"",cooldownUntil:0,fromCache:false,notice:""};
  showError("");createVerificationLinks(name);renderProfile(name,null,null);renderFilters();renderNews();showLoading(true);
  try {
   const wikiTask=fetchWikipedia(name,controller.signal).then(result=>{if(run===generation) renderProfile(name,result,null);return result;});
@@ -416,16 +516,16 @@ async function searchPerson(event) {
   const mismatch=Boolean(wiki.value?.qid && data.value?.qid && wiki.value.qid!==data.value.qid);
   if(mismatch) data.value=null; // Never borrow an English name from a different entity.
   renderProfile(name,wiki,data);
-  const news=await fetchGdeltNews(name,data.value?.english,timespan,maxrecords,controller.signal);
+  const news=await fetchNews(name,data.value?.english,timespan,maxrecords,controller.signal);
   if(run!==generation || controller.signal.aborted) return;
   articles=news.ok?news.value:[];newsState=news.state;
-  newsContext={name,cooldownUntil:news.cooldownUntil || 0,fromCache:Boolean(news.fromCache)};renderFilters();renderNews();
-  const failed=[!wiki.ok?"Wikipedia":null,!data.ok?"Wikidata":null,!news.ok?"GDELT":null].filter(Boolean);
-  if(!news.ok) showError(NEWS_MESSAGES[news.state] || NEWS_MESSAGES.error);
+  newsContext={name,provider:news.provider || "",cooldownUntil:news.cooldownUntil || 0,fromCache:Boolean(news.fromCache),notice:news.notice || ""};renderFilters();renderNews();
+  const failed=[!wiki.ok?"Wikipedia":null,!data.ok?"Wikidata":null].filter(Boolean);
+  if(!news.ok) showError(NEWS_UNAVAILABLE_MESSAGE);
   else if(failed.length) showError(failed.join("、")+" 暫時無法取得；其他已取得的資料與外部查證入口仍可使用。");
   else if(!wiki.value && !data.value && !articles.length) showError("🤖 我翻了一圈，目前沒有找到足夠資料。請確認姓名，或使用下方外部搜尋。",true);
   else showError("🤖 找到了！不過先別急著下結論，我們看看來源。",true);
-  if(!news.ok && (!wiki.ok || !data.ok)) $("status").append(document.createTextNode(" "+failed.filter(source=>source!=="GDELT").join("、")+" 也暫時無法取得，請使用外部查證入口。"));
+  if(!news.ok && failed.length) $("status").append(document.createTextNode(" "+failed.join("、")+" 也暫時無法取得，請使用外部查證入口。"));
   if(mismatch) $("status").append(document.createTextNode(" 人物來源的識別碼不一致；新聞已改用原始姓名搜尋，請核對人物身分。"));
   if(news.omitted) $("status").append(document.createTextNode(" 部分新聞缺少有效標題或網址，已略過。"));
   const checked=new Intl.DateTimeFormat("zh-TW",{timeZone:"Asia/Taipei",dateStyle:"short",timeStyle:"short"}).format(new Date());
@@ -446,7 +546,7 @@ function clearSearch() {
  $("official-links").replaceChildren(...Array.from(initialOfficial.cloneNode(true).children));
  $("official-description").textContent="回到原始紀錄，查閱提案、公告與公開資料。";
  $("discussion-description").textContent="輸入姓名後，可前往各平台搜尋。網路討論是觀點，請搭配可靠來源判讀。";
- $("discussion-links").replaceChildren();articles=[];selectedFilter="all";newsState="idle";newsContext={name:"",cooldownUntil:0,fromCache:false};$("person-name").focus();
+ $("discussion-links").replaceChildren();articles=[];selectedFilter="all";newsState="idle";newsContext={name:"",provider:"",cooldownUntil:0,fromCache:false,notice:""};$("person-name").focus();
 }
 document.querySelector('a[href="#guide"]').addEventListener("click",()=>{$("guide").hidden=false;});
 $("search-form").addEventListener("submit",searchPerson);
